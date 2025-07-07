@@ -1,0 +1,133 @@
+import streamlit as st
+import faiss
+import json
+import os
+import numpy as np
+from sentence_transformers import SentenceTransformer
+import ollama
+from PyPDF2 import PdfReader
+
+st.set_page_config(page_title="Resume Evaluator", layout="wide")
+st.title("RAG-Powered Resume Evaluator")
+
+# --------- LOAD EMBEDDINGS + EXAMPLES ----------
+@st.cache_resource
+def load_bullet_examples():
+    with open("pages/resume_examples.json", "r") as f:
+        bullets = json.load(f)
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    embeddings = model.encode(bullets)
+    index = faiss.IndexFlatL2(embeddings.shape[1])
+    index.add(np.array(embeddings))
+    return bullets, model, index
+
+examples, embed_model, faiss_index = load_bullet_examples()
+
+# --------- RESUME INPUT METHOD ----------
+st.subheader("Step 1: Provide Your Resume")
+input_method = st.radio("Choose input method:", ["Paste manually", "Smart resume picker"])
+
+resume = ""
+st.subheader("Step 2: Provide Job Description")
+job_desc = st.text_area("Paste the job description here", height=250)
+job_desc_for_match = job_desc
+
+if input_method == "Paste manually":
+    resume = st.text_area("Paste your resume here", height=300)
+else:
+    uploaded_files = st.file_uploader("Upload one or more resume files (PDF only)", type=["pdf"], accept_multiple_files=True)
+    selected_file = None
+    if uploaded_files and job_desc_for_match:
+        jd_embed = embed_model.encode([job_desc_for_match])[0]
+        scores = []
+        file_texts = []
+        for file in uploaded_files:
+            reader = PdfReader(file)
+            text = " ".join(page.extract_text() for page in reader.pages if page.extract_text())
+            file_texts.append(text)
+            file_embed = embed_model.encode([text])[0]
+            score = np.dot(jd_embed, file_embed) / (np.linalg.norm(jd_embed) * np.linalg.norm(file_embed))
+            scores.append(score)
+        best_idx = int(np.argmax(scores))
+        selected_file = uploaded_files[best_idx].name
+        resume = file_texts[best_idx]
+        st.success(f"Best matching resume selected: {selected_file}")
+
+# --------- MATCH SCORE + ANALYSIS ----------
+if st.button("Analyze Resume"):
+    if not resume or not job_desc:
+        st.warning("Please provide both resume and job description.")
+    else:
+        jd_embedding = embed_model.encode([job_desc])[0]
+        resume_embedding = embed_model.encode([resume])[0]
+        score = np.dot(jd_embedding, resume_embedding) / (np.linalg.norm(jd_embedding) * np.linalg.norm(resume_embedding))
+        match_score = round(score * 100)
+
+        st.metric("Resume–JD Match Score", f"{match_score} %")
+
+        with st.spinner("Analyzing strengths and weaknesses..."):
+            analysis_prompt = f"""
+You are a career coach reviewing a resume and a job description.
+
+First, extract and list all tools and technologies mentioned in the job description.
+
+Then, extract and list all tools and technologies mentioned in the resume.
+
+Based on these two lists:
+- Identify tools present in both (overlap).
+- Identify tools in the job description that are **not found** in the resume.
+
+only return the skills which are not present in the resume.
+Then analyze and summarize:
+1. Key Strengths (skills and experiences that align)
+2. Real weaknesses or gaps (only if a skill or tool is truly absent)
+3. Suggestions for improvement
+
+--- RESUME ---
+{resume}
+
+--- JOB DESCRIPTION ---
+{job_desc}
+"""
+            analysis_response = ollama.chat(
+                model="llama3:instruct",
+                messages=[{"role": "user", "content": analysis_prompt}]
+            )
+            st.markdown("### Resume Analysis")
+            st.markdown(analysis_response["message"]["content"])
+
+# --------- RAG-ENHANCED REWRITE ----------
+if st.button("Suggest Resume Improvements"):
+    if not resume or not job_desc:
+        st.warning("Please provide both resume and job description.")
+    else:
+        jd_vector = embed_model.encode([job_desc])
+        _, indices = faiss_index.search(jd_vector, k=5)
+        retrieved_examples = [examples[i] for i in indices[0]]
+
+        context = "\n".join(retrieved_examples)
+
+        with st.spinner("Generating RAG-enhanced resume suggestions..."):
+            rag_prompt = f"""
+Use the following resume bullet examples as reference:
+
+--- EXAMPLES ---
+{context}
+
+Now improve this resume section based on the job description below:
+
+--- RESUME ---
+{resume}
+
+--- JOB DESCRIPTION ---
+{job_desc}
+
+Output 3 improved bullet points tailored to the job, using action verbs and specific impact.
+"""
+            rag_response = ollama.chat(
+                model="llama3:instruct",
+                messages=[{"role": "user", "content": rag_prompt}]
+            )
+
+            st.markdown("### Suggested Resume Bullets")
+            st.markdown(rag_response["message"]["content"])

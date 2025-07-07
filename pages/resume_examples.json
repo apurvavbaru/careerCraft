@@ -1,0 +1,31 @@
+[
+  "Built an end-to-end ETL pipeline using PySpark and Airflow to process 10M+ records daily",
+  "Developed interactive Tableau dashboards that reduced executive reporting time by 40%",
+  "Led a forecasting model deployment using XGBoost, improving demand prediction accuracy by 22%",
+  "Created automated data quality checks using Python and SQL, cutting errors by 85%",
+  "Integrated Google Analytics with CRM data to analyze conversion funnels and user behavior",
+  "Collaborated with business stakeholders to define KPIs and built dashboards for sales performance",
+  "Deployed NLP pipeline to extract sentiment from 100K+ customer reviews with 91% accuracy",
+  "Trained a fraud detection model using Isolation Forest on carbon credit transaction data",
+  "Automated recurring Excel reports with Python scripts, saving 10 hours/week",
+  "Wrote SQL queries to identify retention trends, influencing product feature prioritization",
+
+  "Optimized backend services to reduce API latency by 60% using async programming",
+  "Built CI/CD pipeline using GitHub Actions and Docker to streamline deployment workflow",
+  "Developed RESTful APIs in Flask used by 3+ internal tools across teams",
+  "Refactored legacy codebase to improve performance and reduce technical debt",
+  "Set up monitoring tools (Grafana + Prometheus) for cloud service health metrics",
+  "Created test automation suite using Pytest, increasing coverage from 45% to 85%",
+
+  "Led a client-facing BI implementation project for a Fortune 500 company",
+  "Facilitated design thinking workshops to define MVP for digital transformation",
+  "Built financial models to assess product ROI, helping prioritize a $1.2M investment",
+  "Presented business insights to VP-level stakeholders using interactive dashboards",
+  "Coordinated across 5 departments to deliver a supply chain analytics tool within 8 weeks",
+
+  "Mentored 2 junior analysts on SQL and Tableau, resulting in their project independence",
+  "Managed cross-functional meetings and ensured milestone delivery for data initiatives",
+  "Simplified complex analyses into business-ready presentations for non-technical audiences",
+  "Worked with UX and marketing to align messaging strategy with customer pain points",
+  "Led internal training on data storytelling best practices, attended by 30+ team members"
+]
